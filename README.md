@@ -195,6 +195,7 @@
         [0x1FA00, 0x1FA6F],    // Chess Symbols
         [0x1FA70, 0x1FAFF],    // Symbols and Pictographs Extended-A
         [0x2600, 0x27BF],      // Miscellaneous Symbols and Dingbats
+        [0x1F000, 0x1F2FF]     // Mahjong Tiles, Domino Tiles, Playing Cards (تعتبر رموز تعبيرية)
     ];
 
     // نطاقات رموز عامة (تم تعديلها لتشمل النطاقات المخصصة في السابق)
@@ -257,34 +258,55 @@
         return emojiRanges.some(range => codePoint >= range[0] && codePoint <= range[1]) || specialSymbols.includes(char);
     }
 
+    let allSymbols = [];
+    
     // دالة لتحميل جميع الرموز
-    function loadAllSymbols() {
-        const emojisContainer = document.getElementById("emojisContainer");
-        const symbolsContainer = document.getElementById("symbolsContainer");
-        const allSymbols = [];
-
-        // جمع جميع الرموز
+    function loadAndPrepareSymbols() {
+        const uniqueSymbols = new Set();
+        
         [...emojiRanges, ...symbolRanges].forEach(range => {
             const [start, end] = range;
             for (let i = start; i <= end; i++) {
                 try {
-                    allSymbols.push(String.fromCodePoint(i));
+                    const char = String.fromCodePoint(i);
+                    uniqueSymbols.add(char);
                 } catch (e) {
                     continue;
                 }
             }
         });
         
-        // إضافة الرموز الخاصة
-        allSymbols.push(...specialSymbols);
+        specialSymbols.forEach(sym => uniqueSymbols.add(sym));
+        allSymbols = [...uniqueSymbols];
 
-        // فرز الرموز إلى إيموجي ورموز أخرى
-        allSymbols.forEach(sym => {
-            const span = document.createElement("span");
-            span.textContent = sym;
+        // عرض جميع الرموز فورًا
+        displaySymbols(allSymbols);
+    }
+
+    // دالة لعرض الرموز بناءً على قائمة معينة
+    function displaySymbols(symbolsToDisplay) {
+        const emojisContainer = document.getElementById("emojisContainer");
+        const symbolsContainer = document.getElementById("symbolsContainer");
+        let emojisHtml = '';
+        let symbolsHtml = '';
+        
+        symbolsToDisplay.forEach(sym => {
+            if (isEmoji(sym)) {
+                emojisHtml += `<span class="symbol-item emoji-symbol">${sym}</span>`;
+            } else {
+                symbolsHtml += `<span class="symbol-item regular-symbol">${sym}</span>`;
+            }
+        });
+
+        emojisContainer.innerHTML = emojisHtml;
+        symbolsContainer.innerHTML = symbolsHtml;
+
+        // إعادة ربط أحداث النقر بعد إضافة العناصر
+        const allSymbolItems = document.querySelectorAll(".symbol-item");
+        allSymbolItems.forEach(span => {
             span.onclick = () => {
                 const tempInput = document.createElement("textarea");
-                tempInput.value = sym;
+                tempInput.value = span.textContent;
                 document.body.appendChild(tempInput);
                 tempInput.select();
                 try {
@@ -305,26 +327,20 @@
                     document.body.removeChild(tempInput);
                 }
             };
-            if (isEmoji(sym)) {
-                span.className = "symbol-item emoji-symbol";
-                emojisContainer.appendChild(span);
-            } else {
-                span.className = "symbol-item regular-symbol";
-                symbolsContainer.appendChild(span);
-            }
         });
     }
 
     // تحميل الرموز عند فتح الصفحة
-    window.onload = loadAllSymbols;
+    window.onload = loadAndPrepareSymbols;
 
     // البحث المباشر
     document.getElementById("search").addEventListener("input", e=>{
-        const val = e.target.value;
-        const allSymbolItems = document.querySelectorAll(".symbol-item");
-        allSymbolItems.forEach(span=>{
-            span.style.display = span.textContent.includes(val)?"inline-block":"none";
-        });
+        const val = e.target.value.toLowerCase();
+        
+        const filteredSymbols = allSymbols.filter(sym => sym.toLowerCase().includes(val));
+        
+        // عرض النتائج في الأقسام المخصصة
+        displaySymbols(filteredSymbols);
     });
     </script>
 </body>
